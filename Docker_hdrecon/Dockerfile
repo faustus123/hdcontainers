@@ -308,6 +308,21 @@ ENV JANA_PLUGIN_PATH ${HALLD_HOME}/plugins:${JANA_PLUGIN_PATH}
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Download and install SQLite file for CCDB
+
+ENV INSTALL_DIR_CCDB_DB $CONTAINER_ROOT/DB
+
+RUN mkdir -p $INSTALL_DIR_CCDB_DB \
+	&&  cd $INSTALL_DIR_CCDB_DB \
+	&&  wget https://halldweb.jlab.org/dist/ccdb.sqlite \
+	&&  git clone https://github.com/jeffersonlab/hd_utilities \
+	&&  ./hd_utilities/CCDButils/ccdb_reduce.py -input=ccdb.sqlite -output=ccdb_sparse.sqlite -rmin=20000 -rmax=99999 \
+	&&  rm -rf ccdb.sqlite hd_utilities 
+
+ENV JANA_CALIB_URL  sqlite:///${INSTALL_DIR_CCDB_DB}/ccdb_sparse.sqlite
+ENV CCDB_CONNECTION sqlite:///${INSTALL_DIR_CCDB_DB}/ccdb_sparse.sqlite
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Default run configuration is to run bash as user "gx" from home directory
 
 USER gx
