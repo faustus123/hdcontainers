@@ -11,8 +11,9 @@
 # Build time: 
 # Image size: 
 #
-#   docker build -t jeffersonlab/hdrecon:2.20.1 .
+#   docker build -t hdrecon .
 #
+#   docker tag jeffersonlab/hdrecon:2.20.1 hdrecon
 #   docker push jeffersonlab/hdrecon:2.20.1
 #
 #--------------------------------------------------------------------------
@@ -24,6 +25,8 @@ ARG BUILD_THREADS=8
 ARG CLHEP_TAG=CLHEP_2_3_4_5
 ARG ROOT_VERSION=6.10.08
 ARG CCDB_VERSION=1.06.05
+ARG CCDB_RUN_MIN=10000
+ARG CCDB_RUN_MAX=99999
 ARG RCDB_VERSION=0.02
 ARG HDDS_VERSION=3.12
 ARG JANA_VERSION=0.7.9p1
@@ -156,6 +159,7 @@ ENV PATH ${PATH}:${CCDB_HOME}/bin
 ENV LD_LIBRARY_PATH ${CCDB_HOME}/lib:${LD_LIBRARY_PATH}
 ENV PYTHONPATH ${CCDB_HOME}/python
 
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Build and install HDDS
 #
@@ -184,6 +188,7 @@ RUN mkdir -p $INSTALL_DIR_HDDS \
 ENV HDDS_HOME ${GLUEX_TOP}/app/hdds/PRO
 ENV PATH ${PATH}:${HDDS_HOME}/build/bin
 ENV LD_LIBRARY_PATH ${HDDS_HOME}/build/lib:${LD_LIBRARY_PATH}
+ENV JANA_GEOMETRY_URL xmlfile://${HDDS_HOME}/main_HDDS.xml
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -277,6 +282,10 @@ ENV PYTHONPATH ${RCDB_HOME}/python:${PYTHONPATH}
 
 ENV INSTALL_DIR_SIM_RECON $CONTAINER_ROOT/app/sim-recon
 
+# Set envars here before building so they make it into the setenv.(c)sh file
+ENV JANA_CALIB_URL    sqlite:///${GLUEX_TOP}/DB/ccdb.sqlite
+ENV JANA_RESOURCE_DIR ${GLUEX_TOP}/resources
+
 RUN mkdir -p $INSTALL_DIR_SIM_RECON \
 	&&  cd $INSTALL_DIR_SIM_RECON \
 	&&  git clone https://github.com/jeffersonlab/sim-recon v$SIM_RECON_VERSION \
@@ -314,17 +323,40 @@ ENV INSTALL_DIR_CCDB_DB $CONTAINER_ROOT/DB
 
 RUN mkdir -p $INSTALL_DIR_CCDB_DB \
 	&&  cd $INSTALL_DIR_CCDB_DB \
-	&&  wget https://halldweb.jlab.org/dist/ccdb.sqlite \
-	&&  git clone https://github.com/jeffersonlab/hd_utilities \
-	&&  ./hd_utilities/CCDButils/ccdb_reduce.py -input=ccdb.sqlite -output=ccdb_sparse.sqlite -rmin=20000 -rmax=99999 \
-	&&  rm -rf ccdb.sqlite hd_utilities 
+	&&  wget -O ccdb_`date +"%Y_%m_%d"`.sqlite https://halldweb.jlab.org/dist/ccdb.sqlite \
+	&&  ln -s ccdb_*.sqlite ccdb.sqlite \
+	&&  mkdir ${GLUEX_TOP}/DB \
+	&&  ln -s ${INSTALL_DIR_CCDB_DB}/ccdb.sqlite ${GLUEX_TOP}/DB/ccdb.sqlite
 
-ENV JANA_CALIB_URL  sqlite:///${INSTALL_DIR_CCDB_DB}/ccdb_sparse.sqlite
-ENV CCDB_CONNECTION sqlite:///${INSTALL_DIR_CCDB_DB}/ccdb_sparse.sqlite
+	# Reduce size of CCDB file (broken at the moment)
+#RUN git clone https://github.com/jeffersonlab/hd_utilities \
+#	&&  ./hd_utilities/CCDButils/ccdb_reduce.py -input=ccdb.sqlite -output=ccdb_sparse.sqlite -rmin=$CCDB_RUN_MIN -rmax=$CCDB_RU_MAX \
+#	&&  rm -rf ccdb.sqlite ccdb_20*.sqlite hd_utilities \
+#	&&  mv cdb_sparse.sqlite cdb_sparse_`date +"%Y_%m_%d"`.sqlite \
+#	&&  ln -s ccdb_sparse*.sqlite ccdb.sqlite
+
+
+# n.b. JANA_CALIB_URL is set prior to building sim-recon above
+ENV CCDB_CONNECTION ${JANA_CALIB_URL}
+
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Pull in resources (e.g. magnetic field map)
+
+COPY *.evio /container
+RUN mkdir /container/resources \
+	&&  cd /container \
+	&&  ln -s /container/resources ${GLUEX_TOP}/resources \
+	&&  hd_root -PAUTOACTIVATE=DChargedTrack,DNeutralParticle *.evio \
+	&&  rm -rf hd_root.root *.evio \
+	&&  chmod go+w -R /container/resources
+
+# n.b. JANA_RESOURCE_DIR is set prior to building sim-recon above
+
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Default run configuration is to run bash as user "gx" from home directory
 
 USER gx
-WORKDIR /home/gx
+WORKDIR /data
 CMD /bin/bash
