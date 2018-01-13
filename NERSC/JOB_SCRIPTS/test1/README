@@ -1,0 +1,8 @@
+
+This contains a first stab at a job script for Cori.
+It will run hd_root from a container (already pulled
+into shifter). The script run_job.sh and jana_recon.config
+should both be in the /global/project/projectdirs/m2828
+directory when the job runs. Also, the raw data file
+hd_rawdata_030134_002.evio should be there. All output
+files will also be placed in that same directory.
