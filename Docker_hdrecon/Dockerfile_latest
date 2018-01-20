@@ -11,10 +11,10 @@
 # Build time: 
 # Image size: 
 #
-#   docker build -t hdrecon .
+#   docker build -f Dockerfile_latest -t hdrecon .
 #
-#   docker tag hdrecon jeffersonlab/hdrecon:2.20.1
-#   docker push jeffersonlab/hdrecon:2.20.1
+#   docker tag hdrecon jeffersonlab/hdrecon:latest
+#   docker push jeffersonlab/hdrecon:latest
 #
 #--------------------------------------------------------------------------
 
@@ -24,7 +24,7 @@ ARG BUILD_THREADS=8
 
 ARG CLHEP_TAG=CLHEP_2_3_4_5
 ARG ROOT_VERSION=6.10.08
-ARG CCDB_VERSION=1.06.05
+ARG CCDB_VERSION=1.06.06
 ARG CCDB_RUN_MIN=10000
 ARG CCDB_RUN_MAX=99999
 ARG RCDB_VERSION=0.02
@@ -32,7 +32,7 @@ ARG HDDS_VERSION=3.12
 ARG JANA_VERSION=0.7.9p1
 ARG AMPTOOLS_VERSION=0.9.3
 ARG GLUEX_ROOT_ANALYSIS_VERSION=0.2
-ARG SIM_RECON_VERSION=2.20.1
+#ARG SIM_RECON_VERSION=2.20.1
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -288,9 +288,8 @@ ENV JANA_RESOURCE_DIR ${GLUEX_TOP}/resources
 
 RUN mkdir -p $INSTALL_DIR_SIM_RECON \
 	&&  cd $INSTALL_DIR_SIM_RECON \
-	&&  git clone https://github.com/jeffersonlab/sim-recon v$SIM_RECON_VERSION \
-	&&  cd v$SIM_RECON_VERSION \
-	&&  git checkout tags/$SIM_RECON_VERSION \
+	&&  git clone https://github.com/jeffersonlab/sim-recon latest \
+	&&  cd latest \
 	&&  export HALLD_HOME=$PWD \
 	&&  export BMS_OSNAME=`./src/BMS/osrelease.pl` \
 	&&  ln -s build $HDDS_HOME/$BMS_OSNAME \
@@ -307,8 +306,8 @@ RUN mkdir -p $INSTALL_DIR_SIM_RECON \
 	&&  ln -s Linux*/lib \
 	&&  ln -s Linux*/plugins \
 	&&  mkdir -p $GLUEX_TOP/app/sim-recon \
-	&&  ln -s $INSTALL_DIR_SIM_RECON/v$SIM_RECON_VERSION $GLUEX_TOP/app/sim-recon/v$SIM_RECON_VERSION \
-	&&  ln -s v$SIM_RECON_VERSION $GLUEX_TOP/app/sim-recon/PRO
+	&&  ln -s $INSTALL_DIR_SIM_RECON/latest $GLUEX_TOP/app/sim-recon/latest \
+	&&  ln -s latest $GLUEX_TOP/app/sim-recon/PRO
 
 ENV HALLD_HOME ${GLUEX_TOP}/app/sim-recon/PRO
 ENV PATH ${PATH}:${HALLD_HOME}/bin
