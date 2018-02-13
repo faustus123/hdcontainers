@@ -11,10 +11,10 @@
 # Build time: 
 # Image size: 
 #
-#   docker build -t hdrecon .
+#   docker build -t hdrecon:2.21.1 .
 #
-#   docker tag hdrecon jeffersonlab/hdrecon:2.20.1
-#   docker push jeffersonlab/hdrecon:2.20.1
+#   docker tag hdrecon jeffersonlab/hdrecon:2.21.1
+#   docker push jeffersonlab/hdrecon:2.21.1
 #
 #--------------------------------------------------------------------------
 
@@ -24,15 +24,15 @@ ARG BUILD_THREADS=8
 
 ARG CLHEP_TAG=CLHEP_2_3_4_5
 ARG ROOT_VERSION=6.10.08
-ARG CCDB_VERSION=1.06.05
+ARG CCDB_VERSION=1.06.06
 ARG CCDB_RUN_MIN=10000
 ARG CCDB_RUN_MAX=99999
-ARG RCDB_VERSION=0.02
+ARG RCDB_VERSION=0.02.01
 ARG HDDS_VERSION=3.12
 ARG JANA_VERSION=0.7.9p1
 ARG AMPTOOLS_VERSION=0.9.3
 ARG GLUEX_ROOT_ANALYSIS_VERSION=0.2
-ARG SIM_RECON_VERSION=2.20.1
+ARG SIM_RECON_VERSION=2.21.1
 
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
