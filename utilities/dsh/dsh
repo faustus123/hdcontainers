@@ -8,10 +8,12 @@
 #
 #   DSH_DEFAULT_IMAGE   in standard name:tag format (e.g. centos:7)
 #   DSH_SHELL           command to be run (e.g. tcsh  or bash)
+#   DSH_CONTAINER_ARGS  extra arguments to pass in when creating container
 #
 
 set image_name=centos:7
 set container_cmd="bash"
+set container_args=""
 set volumes="-v ${HOME}:/home_host/$USER -v /tmp:/tmp_host"
 set user=$USER
 set ports="-p 6080:6080 -p 5900:5900"
@@ -29,7 +31,11 @@ if ( $?DSH_SHELL ) then
 	set container_cmd=$DSH_SHELL
 endif
 
-while ( $# ) 
+if ( $?DSH_CONTAINER_ARGS ) then
+	set container_args="$DSH_CONTAINER_ARGS"
+endif
+
+while ( $# )
 	switch ( $1 )
 
 		case '-h':
@@ -89,6 +95,7 @@ end
 
 # Print usage statement and exit if appropriate
 if ( $print_usage == "yes" ) then
+    echo " "
 	echo " This script is used to optionally launch and then attach to"
 	echo "a docker container. It is meant to make it easy to use the"
 	echo "container like a virtual machine by just typing 'dsh' to "
@@ -129,6 +136,9 @@ if ( $print_usage == "yes" ) then
 	echo "DSH_DEFAULT_IMAGE  set the docker image used. This is superceded"
 	echo "				     by the the command line argument if given"
 	echo " "
+    echo "DSH_CONTAINER_ARGS extra arguments to be passed when creating container"
+    echo "                   (e.g. '-v hostdir:containerdir' )"
+    echo " "
 	echo "Usage:"
 	echo "       dsh [options] [imagename]"
 	echo " "
@@ -228,7 +238,7 @@ if ( $container_id == "" ) then
 	
 	# Create new container that stays up forever until explicity stopped
 	# Map a few directories over to the container
-	set cmd = "docker run -d $misc_run_opts $volumes $ports $image_name sleep infinity"
+	set cmd = "docker run -d $misc_run_opts $volumes $ports $container_args $image_name sleep infinity"
 	echo $cmd
 	$cmd
 
