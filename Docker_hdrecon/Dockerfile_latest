@@ -126,7 +126,7 @@ RUN mkdir -p $CONTAINER_ROOT/build \
 		-Dgdml=ON \
 		-Dminuit2=ON \
 		../root-${ROOT_VERSION} \
-	&&  make -j $BUILD_THREADS \
+	&&  make \
 	&&  make install \
 	&&  mkdir -p $GLUEX_TOP/app/root \
 	&&  ln -s $INSTALL_DIR_ROOT $GLUEX_TOP/app/root/$ROOT_VERSION \
