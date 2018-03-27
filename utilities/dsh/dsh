@@ -251,7 +251,7 @@ if ( $container_id == "" ) then
 	set container_id=`docker ps -a | grep $image_name | awk '{print $1}'`
 	set myuid=`id -u $user`
 	set mygid=`id -g $user`
-    set mygroup=`id -ng $user | awk -F'\' '{print $NF}'` # awk cuts out "JLab\" from groups like "JLab\da"
+	set mygroup=`id -ng $user | awk -F'\' '{print $NF}'` # awk cuts out "JLab\" from groups like "JLab\da"
 	
 	# Ubuntu adduser takes extra arguments to avoid prompting user for extra info
 	if ( $ubuntu_adduser_style == "auto" ) then
@@ -265,12 +265,25 @@ if ( $container_id == "" ) then
 	if ( $ubuntu_style_adduser == "yes" ) then
 		set adduser_args='--disabled-password --gecos ""'
 	endif
+
+	# Add user to either "wheel" group for centos or "sudo" group for Ubuntu.
+	# For some of our centos7 containers, wheel is given sudo privilege and
+	# we want to add this user to it.
+	# n.b. recent ubuntu images need "apt-get update" followed by
+	# "apt-get install sudo"
+	set sudo_group=""
+	if ( $ubuntu_style_adduser == "yes" ) then
+		set sudo_group="sudo"
+	else
+		set sudo_group="wheel"
+	endif
 	
-	echo "Adding user $user (id=$myuid groupid=$mygid) ..."
+	echo "Adding user $user (id=$myuid groupid=$mygid) to container id=$container_id ..."
 	docker exec -u 0 $container_id groupadd -g $mygid $mygroup
 	docker exec -u 0 $container_id adduser $adduser_args --uid $myuid --gid $mygid --shell /bin/tcsh $user
-	#docker exec -it  -u $myuid $container_id ln -s /docker/dot_tcshrc /home/$user/.tcshrc
+	docker exec -u 0 $container_id usermod -G $sudo_group $user
 	docker exec -it  -u $myuid $container_id ln -s /home_host/$user /home/$user/home_host
+
 endif
 
 # Get container id
