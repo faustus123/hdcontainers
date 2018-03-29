@@ -8,15 +8,17 @@
 #
 #   DSH_DEFAULT_IMAGE   in standard name:tag format (e.g. centos:7)
 #   DSH_SHELL           command to be run (e.g. tcsh  or bash)
+#   DSH_NAME            name to assign container when created (hostname in container)
 #   DSH_CONTAINER_ARGS  extra arguments to pass in when creating container
 #
 
 set image_name=centos:7
 set container_cmd="bash"
+set container_name="docker"
 set container_args=""
 set volumes="-v ${HOME}:/home_host/$USER -v /tmp:/tmp_host"
 set user=$USER
-set ports="-p 6080:6080 -p 5900:5900"
+set ports="-p 6080:6080 -p 5901:5901"
 set stop_container="no"
 set print_usage="no"
 set ubuntu_adduser_style="auto"
@@ -29,6 +31,10 @@ endif
 
 if ( $?DSH_SHELL ) then 
 	set container_cmd=$DSH_SHELL
+endif
+
+if ( $?DSH_NAME ) then
+	set container_name="$DSH_NAME"
 endif
 
 if ( $?DSH_CONTAINER_ARGS ) then
@@ -238,7 +244,7 @@ if ( $container_id == "" ) then
 	
 	# Create new container that stays up forever until explicity stopped
 	# Map a few directories over to the container
-	set cmd = "docker run -d $misc_run_opts $volumes $ports $container_args $image_name sleep infinity"
+	set cmd = "docker run -d --hostname $container_name $misc_run_opts $volumes $ports $container_args $image_name sleep infinity"
 	echo $cmd
 	$cmd
 
