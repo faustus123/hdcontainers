@@ -7,18 +7,18 @@
 # envars:
 #
 #   DSH_DEFAULT_IMAGE   in standard name:tag format (e.g. centos:7)
+#   DSH_DEFAULT_ARGS    extra arguments to pass in when creating container
 #   DSH_SHELL           command to be run (e.g. tcsh  or bash)
 #   DSH_NAME            name to assign container when created (hostname in container)
-#   DSH_CONTAINER_ARGS  extra arguments to pass in when creating container
 #
 
 set image_name=centos:7
+set default_args=""
 set container_cmd="bash"
 set container_name="docker"
-set container_args=""
 set volumes="-v ${HOME}:/home_host/$USER -v /tmp:/tmp_host"
 set user=$USER
-set ports="-p 6080:6080 -p 5901:5901"
+set ports="-p 6080:6080 -p 5900:5900 -p 5901:5901"
 set stop_container="no"
 set print_usage="no"
 set ubuntu_adduser_style="auto"
@@ -29,7 +29,7 @@ if ( $?DSH_DEFAULT_IMAGE ) then
 	set image_name=$DSH_DEFAULT_IMAGE
 endif
 
-if ( $?DSH_SHELL ) then 
+if ( $?DSH_SHELL ) then
 	set container_cmd=$DSH_SHELL
 endif
 
@@ -37,11 +37,14 @@ if ( $?DSH_NAME ) then
 	set container_name="$DSH_NAME"
 endif
 
-if ( $?DSH_CONTAINER_ARGS ) then
-	set container_args="$DSH_CONTAINER_ARGS"
+if ( $?DSH_DEFAULT_ARGS ) then
+	set default_args="$DSH_DEFAULT_ARGS"
+	if ( "$default_args" =~ "*-gdb*" ) then
+		set default_args=`echo  $default_args|sed 's/\-gdb/--cap-add=SYS_PTRACE --security-opt seccomp=unconfined/g'`
+	endif
 endif
 
-while ( $# )
+while ( $# ) 
 	switch ( $1 )
 
 		case '-h':
@@ -101,7 +104,6 @@ end
 
 # Print usage statement and exit if appropriate
 if ( $print_usage == "yes" ) then
-    echo " "
 	echo " This script is used to optionally launch and then attach to"
 	echo "a docker container. It is meant to make it easy to use the"
 	echo "container like a virtual machine by just typing 'dsh' to "
@@ -139,12 +141,23 @@ if ( $print_usage == "yes" ) then
 	echo "DSH_SHELL          sets command to be run (e.g. tcsh) This is superceded "
 	echo "                   by the -c command line option if given"
 	echo " "
-	echo "DSH_DEFAULT_IMAGE  set the docker image used. This is superceded"
-	echo "				     by the the command line argument if given"
+	echo "DSH_NAME           sets name of container on startup. Useful for "
+	echo "                   communicating with other containers, but not much else"
 	echo " "
-    echo "DSH_CONTAINER_ARGS extra arguments to be passed when creating container"
-    echo "                   (e.g. '-v hostdir:containerdir' )"
-    echo " "
+	echo "DSH_DEFAULT_IMAGE  set the docker image used. This is superceded"
+	echo "                   by the the command line argument if given"
+	echo " "
+	echo "DSH_DEFAULT_ARGS   set default arguments to the docker run command."
+	echo "                   This is useful if you wish to set docker options in"
+	echo "                   say, a login script so they don't need to be added"
+	echo "                   to the dsh command line explicitly. For example,"
+	echo "                   setting this to something like the following will"
+	echo "                   cause a directory on the host to be mounted as the"
+	echo "                   home directory for user davidl providing some "
+	echo "                   persistence of config. files across containers."
+	echo " "
+	echo "                 '-v ${HOME}/builds/Linux-Docker/home/davidl:/home/davidl'"
+	echo " "
 	echo "Usage:"
 	echo "       dsh [options] [imagename]"
 	echo " "
@@ -175,7 +188,7 @@ if ( $print_usage == "yes" ) then
 	echo "     -p            Expose port to outside of container. This should"
 	echo "                   be in standard container_port:host_port format"
 	echo "                   used by the docker run command. By default, ports"
-	echo "                   6080 and 5900 are exposed"
+	echo "                   6080, 5900, and 5901 are exposed"
 	echo " "
 	echo "     -cp           Clear ports. This will clear out the list of"
 	echo "                   ports to be mapped. This is really only useful"
@@ -183,7 +196,7 @@ if ( $print_usage == "yes" ) then
 	echo "                   not mapped."
 	echo " "
 	echo "     -gdb          Add '--security-opt seccomp=unconfined' to the run"
-	echo "                   command to allow gdb to work. This con only be done"
+	echo "                   command to allow gdb to work. This can only be done"
 	echo "                   when the container is first created"
 	echo " "
 	echo "     -s            Stop and remove the container"
@@ -244,7 +257,7 @@ if ( $container_id == "" ) then
 	
 	# Create new container that stays up forever until explicity stopped
 	# Map a few directories over to the container
-	set cmd = "docker run -d --hostname $container_name $misc_run_opts $volumes $ports $container_args $image_name sleep infinity"
+	set cmd = "docker run -d --hostname $container_name $misc_run_opts $volumes $ports $default_args $image_name sleep infinity"
 	echo $cmd
 	$cmd
 
@@ -283,13 +296,12 @@ if ( $container_id == "" ) then
 	else
 		set sudo_group="wheel"
 	endif
-	
-	echo "Adding user $user (id=$myuid groupid=$mygid) to container id=$container_id ..."
-	docker exec -u 0 $container_id groupadd -g $mygid $mygroup
-	docker exec -u 0 $container_id adduser $adduser_args --uid $myuid --gid $mygid --shell /bin/tcsh $user
-	docker exec -u 0 $container_id usermod -G $sudo_group $user
-	docker exec -it  -u $myuid $container_id ln -s /home_host/$user /home/$user/home_host
 
+	echo "Adding user $user (id=$myuid groupid=$mygid) ..."
+	docker exec -u 0 -w / $container_id groupadd -g $mygid $mygroup
+	docker exec -u 0 -w / $container_id adduser $adduser_args --uid $myuid --gid $mygid --shell /bin/tcsh $user
+	#docker exec -it -w / -u $myuid $container_id ln -s /docker/dot_tcshrc /home/$user/.tcshrc
+	docker exec -it -w / -u $myuid $container_id ln -s /home_host/$user /home/$user/home_host
 endif
 
 # Get container id
@@ -300,8 +312,15 @@ if ( $container_id == "" ) then
 else
 	
 	echo "Attaching to container $container_id"
-	echo "To open X-windows you may need to run: xhost +"`hostname`
-	#docker exec -it -e DISPLAY=`hostname` $container_id tcsh
-	docker exec -it  -e DISPLAY=`hostname`:0 -u `id -u $user` $container_id $container_cmd
+	set containerIP=`docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $container_id`
+	echo "To open X-windows you may need to run (on the host): xhost +$containerIP"
+	if ( `uname` == 'Darwin' ) then
+		# Mac OS X won't work with hostname and needs this special one
+		set DISPLAY=host.docker.internal:0
+	else
+		set DISPLAY=`hostname`:0
+	endif
 
+	docker exec -it -w /home/$user -e DISPLAY=$DISPLAY -u `id -u $user` $container_id $container_cmd
+	
 endif

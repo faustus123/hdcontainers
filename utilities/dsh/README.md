@@ -36,10 +36,15 @@ The following environment variables can be used to override the
 default values in dsh:
 
 DSH_SHELL          sets command to be run (e.g. tcsh) This is superceded 
-                   by the -c command line option if given
+                              by the -c command line option if given
 
 DSH_DEFAULT_IMAGE  set the docker image used. This is superceded
-				   by the the command line argument if given
+                              by the the command line argument if given
+
+DSH_DEFAULT_ARGS  set default arguments to pass to docker run command.
+                             This useful for storing settings in the environment
+                             (e.g. in login script) so they don't need to be added to
+                             the dsh command line.
 
 # Usage
 
@@ -70,6 +75,23 @@ options:
                    this is to prevent the user's home directory on
                    the host from being mapped since it is added to
                    the list by default. 
+
+     -p            Specify port to be mapped to the container.
+                   The format is just the host_dir:container_dir
+                   format docker uses. This may be specified more
+                   than once and all ports will be mapped.
+                   This only affects when the container is first
+                   started. 
+
+     -cp           Clear ports. This will clear out the list of
+                   ports to be mapped, including any specified 
+                   using the -p option above. The only real use of
+                   this is to remove the default port mappings for
+                   VNC and noVNC.
+
+     -gdb          Add the magic security options when starting
+                   the container that will allow one to run gdb
+                   inside the container.
 
      -s            Stop and remove the container
 
